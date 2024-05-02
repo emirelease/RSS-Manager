@@ -391,6 +391,8 @@ if __name__ == "__main__":
         #print(fbbool)
     if fbbool == "yes" or fbbool == "y":
         fbapi = oauth("https://www.facebook.com/v19.0/dialog/oauth?client_id=" + config.fbcid +"&redirect_uri=https://www.facebook.com/connect/login_success.html&state=\"{st=strss4039,ds=89034759}\"&response_type=token&config_id=463115896141260", app)
+        if fbapi:
+            print("Connected to social media!")
     pinbool = ""
     pinapi = ""
     while (pinbool != "yes" and pinbool != "y") and (pinbool != "no" and pinbool != "n"):
@@ -416,7 +418,8 @@ if __name__ == "__main__":
         response = requests.post("https://api.pinterest.com/v5/oauth/token", data=payload, headers=headers)
         data = response.json()
         access_token = data.get("access_token", "").replace("pina_", "")
-        print("Access Token:", access_token)
+        if access_token:
+            print("Connected to social media!")
         confirm = ""
         while (confirm != "yes" and confirm != "no") and (confirm != "y" and confirm != "n"):
             username = input("Type in your Pinterest username (case-sensitive):\n")
