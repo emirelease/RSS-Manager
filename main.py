@@ -22,6 +22,7 @@ import base64
 import config
 import requests
 
+
 def check_value(url, pattern):
     match = re.search(pattern, url)
     if match:
@@ -102,25 +103,26 @@ def oauth2(url, app):
 
 
 
-def Update(url, dict1, dictQ, exe):
-    x = 0
+def Update(url, dict1, dictQ, exe, spec):
+    #x = 0
     while True:
         if exe.is_set():
             return
-        x += 1
+        
         #print(x)
         feed = feedparser.parse(url)
         for entry in feed.entries:
             if entry.title not in list(dictQ.keys()):
                 #print(entry.summary + "\n")
                 dict1[entry.title] = html2text.html2text(entry.summary)
+                
                 #print(dict1[entry.title])
         sleep(1)
         #print(dict1.keys())
     return
 
-def Sender(txt2, date, APIkey, link2, run, sent, fbbool, pinbool, pinapi, username, board):
-    
+def Sender(txt2, date, APIkey, link2, run, sent, fbbool, pinbool, pinapi, username, board, spec, entry):
+    sent.set()
     print("1: " + "".join(APIkey))
     print("2: " + "".join(pinapi))
     dt_object = datetime.strptime("".join(date), "%Y/%m/%d %H:%M:%S")
@@ -141,10 +143,9 @@ def Sender(txt2, date, APIkey, link2, run, sent, fbbool, pinbool, pinapi, userna
         #print("and " + str(local_timezone.utcoffset(current_time)))
     #print(str(dt_object)) 
     #print(str(datetime.utcnow().astimezone(pytz.utc))) 
-    sent.set()
     while datetime.now().astimezone(pytz.utc) < dt_object:
         #print("HI")
-        if not sent.is_set():
+        if spec["".join(entry)] == 999:
             return
         sleep(0.001)
     
@@ -164,7 +165,7 @@ def Sender(txt2, date, APIkey, link2, run, sent, fbbool, pinbool, pinapi, userna
     
 
 class MessageEdit(QWidget):
-    def __init__(self, src, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board):
+    def __init__(self, src, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2):
         #super().__init__()
         super().__init__()
         self.label = QLabel("Another Window")
@@ -183,13 +184,18 @@ class MessageEdit(QWidget):
         self.pinapi = pinapi
         self.username = username
         self.board = board
+        self.spec = spec
+        self.spec2 = spec2
         
         
     def getter(self, DT, txt, dictQ, entry, APIkey, link):
         #time = DT.time()
-        if (self.run.is_set()):
-            self.run.clear()
-        self.sent.clear()
+        prev = 0
+        if (self.sent.is_set() and self.spec[entry] != 999):
+            self.sent.clear()
+            prev = self.spec[entry]
+            self.spec[entry] = 999
+        self.spec[entry] = prev
         #print(DT.dateTime().toString(DT.displayFormat()))
         #date = self.m2.Value(c_wchar_p, str(DT.dateTime().toString(DT.displayFormat())))
         date = tuple(str(DT.dateTime().toString(DT.displayFormat())))
@@ -201,9 +207,13 @@ class MessageEdit(QWidget):
         APIkey2 = tuple(APIkey)
         dictQ[entry] = str(txt.toPlainText())
         self.run.set()
-        s = multiprocessing.Process(target=Sender, args=(txt2, date, APIkey2, link2, self.run, self.sent, tuple(self.fbbool), tuple(self.pinbool), tuple(self.pinapi), tuple(self.username), tuple(self.board),))
+        
+        self.spec2.update(self.spec)
+        s = multiprocessing.Process(target=Sender, args=(txt2, date, APIkey2, link2, self.run, self.sent, tuple(self.fbbool), tuple(self.pinbool), tuple(self.pinapi), tuple(self.username), tuple(self.board), self.spec2, tuple(entry),))
         s.start()
         self.close()
+        #if self.spec[entry] != 999:
+            #self.spec[entry] == 999
         #s.join()
         
     def Ui(self, src, dictQ, entry, APIkey):
@@ -264,15 +274,20 @@ def moveToQ(entryDel, listWidget, dict1, dictQ, listWidget2, run, sent):
     #p.start()
     viewing(listWidget2, dictQ)
 
-def setting(item, widget, feed, dict1, dictQ, APIkey, m2, run, sent, widget2, fbbool, pinbool, pinapi, username, board):
+def setting(item, widget, feed, dict1, dictQ, APIkey, m2, run, sent, widget2, fbbool, pinbool, pinapi, username, board, spec, spec2):
     #message = QMessageBox()
     #r = 0
+    x = 0
     for entry in list(dict1.keys()):
         if (item.text() == entry):
             #sender = QApplication([])
             ent = entry + "\n\n" + str(dict1[entry])
-
-            window = MessageEdit(ent, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board)
+            while x in spec.values():
+                x += 1
+                if x == 999:
+                    x += 1
+            spec[entry] = x
+            window = MessageEdit(ent, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2)
             #sender.exec()
 
             #message.exec()
@@ -281,15 +296,21 @@ def setting(item, widget, feed, dict1, dictQ, APIkey, m2, run, sent, widget2, fb
             return None
     return None
 
-def settingQ(item, widget, feed, dictQ, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board):
+def settingQ(item, widget, feed, dictQ, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2):
     #message = QMessageBox()
     #r = 0
+    x = 0
     for entry in list(dictQ.keys()):
         if (item.text() == entry):
             #sender = QApplication([])
             ent = entry + "\n\n" + str(dictQ[entry])
-            print(dictQ[entry])
-            window = MessageEdit(ent, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board)
+            #print(dictQ[entry])
+            while x in spec.values():
+                x += 1
+                if x == 999:
+                    x += 1
+            spec[entry] = x
+            window = MessageEdit(ent, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2)
             #sender.exec()
             #message.exec()
             #print("Good")
@@ -305,7 +326,7 @@ def exec(app, exe):
     exe.set()
 
 
-def main(url, dict1, dictQ, exe, fbapi, fbbool, pinapi, pinbool, username, board):
+def main(url, dict1, dictQ, exe, fbapi, fbbool, pinapi, pinbool, username, board, spec):
     #Accepts user input for an RSS URL
     #print(url)
     sleep(1)
@@ -343,18 +364,19 @@ def main(url, dict1, dictQ, exe, fbapi, fbbool, pinapi, pinbool, username, board
 
     listWidgetQ = QListWidget()
     row = 0
+    spec2 = m2.dict()
     #print(dict1.keys())
     for i in list(dictQ.keys()):
         
         listWidgetQ.insertItem(row, i)
         row += 1
     def on_item_activatedQ(item):
-        settingQ(item, listWidgetQ, feed, dictQ, fbapi, m2, run, sent, fbbool, pinbool, pinapi, username, board)
+        settingQ(item, listWidgetQ, feed, dictQ, fbapi, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2)
 
     listWidgetQ.itemActivated.connect(on_item_activatedQ)
 
     def on_item_activated(item):
-        setting(item, listWidget, feed, dict1, dictQ, fbapi, m2, run, sent, listWidgetQ, fbbool, pinbool, pinapi, username, board)
+        setting(item, listWidget, feed, dict1, dictQ, fbapi, m2, run, sent, listWidgetQ, fbbool, pinbool, pinapi, username, board, spec, spec2)
 
     listWidget.itemActivated.connect(on_item_activated)
 
@@ -390,7 +412,7 @@ if __name__ == "__main__":
         fbbool = fbbool.lower()
         #print(fbbool)
     if fbbool == "yes" or fbbool == "y":
-        fbapi = oauth("https://www.facebook.com/v19.0/dialog/oauth?client_id=" + config.fbcid +"&redirect_uri=https://www.facebook.com/connect/login_success.html&state=\"{st=strss4039,ds=89034759}\"&response_type=token&config_id=463115896141260", app)
+        fbapi = oauth("https://www.facebook.com/v19.0/dialog/oauth?client_id=" + config.fbcid +"&redirect_uri=https://www.facebook.com/connect/login_success.html&state=\"{st=strss4039,ds=89034759}\"&response_type=token&config_id=" + config.config_id, app)
         if fbapi:
             print("Connected to social media!")
     pinbool = ""
@@ -431,12 +453,13 @@ if __name__ == "__main__":
     m1 = multiprocessing.Manager()
     dict1 = m1.dict()
     dictQ = m1.dict()
+    spec = m1.dict()
     exe = m1.Event()
-    updater = multiprocessing.Process(target=Update, args=(url,dict1,dictQ,exe,))
+    updater = multiprocessing.Process(target=Update, args=(url,dict1,dictQ,exe,spec))
     # Start the process
     pinapi = access_token
     print(fbapi)
-    m = multiprocessing.Process(target=main,args=(url,dict1,dictQ,exe, tuple(fbapi), tuple(fbbool), tuple(pinapi), tuple(pinbool), tuple(username), tuple(board),))
+    m = multiprocessing.Process(target=main,args=(url,dict1,dictQ,exe, tuple(fbapi), tuple(fbbool), tuple(pinapi), tuple(pinbool), tuple(username), tuple(board), spec))
     updater.start()
     #sleep(1)
     m.start()
