@@ -121,10 +121,10 @@ def Update(url, dict1, dictQ, exe, spec):
         #print(dict1.keys())
     return
 
-def Sender(txt2, date, APIkey, link2, run, sent, fbbool, pinbool, pinapi, username, board, spec, entry):
+def Sender(txt2, date, APIkey, link2, run, sent, fbbool, pinbool, pinapi, username, board, entry):
     sent.set()
-    print("1: " + "".join(APIkey))
-    print("2: " + "".join(pinapi))
+    #print("1: " + "".join(APIkey))
+    #print("2: " + "".join(pinapi))
     dt_object = datetime.strptime("".join(date), "%Y/%m/%d %H:%M:%S")
     current_time = datetime.now()
     # Get the local timezone
@@ -143,9 +143,10 @@ def Sender(txt2, date, APIkey, link2, run, sent, fbbool, pinbool, pinapi, userna
         #print("and " + str(local_timezone.utcoffset(current_time)))
     #print(str(dt_object)) 
     #print(str(datetime.utcnow().astimezone(pytz.utc))) 
+    sent.set()
     while datetime.now().astimezone(pytz.utc) < dt_object:
         #print("HI")
-        if spec["".join(entry)] == 999:
+        if not sent.is_set():
             return
         sleep(0.001)
     
@@ -165,7 +166,7 @@ def Sender(txt2, date, APIkey, link2, run, sent, fbbool, pinbool, pinapi, userna
     
 
 class MessageEdit(QWidget):
-    def __init__(self, src, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2):
+    def __init__(self, src, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec):
         #super().__init__()
         super().__init__()
         self.label = QLabel("Another Window")
@@ -185,17 +186,21 @@ class MessageEdit(QWidget):
         self.username = username
         self.board = board
         self.spec = spec
-        self.spec2 = spec2
+        #self.spec2 = spec2
         
         
     def getter(self, DT, txt, dictQ, entry, APIkey, link):
         #time = DT.time()
         prev = 0
-        if (self.sent.is_set() and self.spec[entry] != 999):
-            self.sent.clear()
-            prev = self.spec[entry]
-            self.spec[entry] = 999
-        self.spec[entry] = prev
+        y = 0
+        for x in list(self.spec.keys()):
+            if x == entry and self.sent[x].is_set():
+                prev = self.spec[x]
+                y = x
+                self.spec[x] = 999
+                self.sent[x].clear()
+                self.spec[entry] = prev
+        
         #print(DT.dateTime().toString(DT.displayFormat()))
         #date = self.m2.Value(c_wchar_p, str(DT.dateTime().toString(DT.displayFormat())))
         date = tuple(str(DT.dateTime().toString(DT.displayFormat())))
@@ -208,8 +213,8 @@ class MessageEdit(QWidget):
         dictQ[entry] = str(txt.toPlainText())
         self.run.set()
         
-        self.spec2.update(self.spec)
-        s = multiprocessing.Process(target=Sender, args=(txt2, date, APIkey2, link2, self.run, self.sent, tuple(self.fbbool), tuple(self.pinbool), tuple(self.pinapi), tuple(self.username), tuple(self.board), self.spec2, tuple(entry),))
+        #self.spec2.update(self.spec)
+        s = multiprocessing.Process(target=Sender, args=(txt2, date, APIkey2, link2, self.run, self.sent[y], tuple(self.fbbool), tuple(self.pinbool), tuple(self.pinapi), tuple(self.username), tuple(self.board), tuple(entry),))
         s.start()
         self.close()
         #if self.spec[entry] != 999:
@@ -258,10 +263,10 @@ def viewing(listWidget, dict1):
         listWidget.insertItem(row, x)
         row += 1
 
-def tick(run, sent, dictQ, entry):
-        while not sent.is_set():
-            sleep(0.001)
-        del dictQ[entry]
+#def tick(run, sent, dictQ, entry):
+        #while not sent.is_set():
+            #sleep(0.001)
+        #del dictQ[entry]
         
 
 def moveToQ(entryDel, listWidget, dict1, dictQ, listWidget2, run, sent):
@@ -274,7 +279,7 @@ def moveToQ(entryDel, listWidget, dict1, dictQ, listWidget2, run, sent):
     #p.start()
     viewing(listWidget2, dictQ)
 
-def setting(item, widget, feed, dict1, dictQ, APIkey, m2, run, sent, widget2, fbbool, pinbool, pinapi, username, board, spec, spec2):
+def setting(item, widget, feed, dict1, dictQ, APIkey, m2, run, sent, widget2, fbbool, pinbool, pinapi, username, board, spec):
     #message = QMessageBox()
     #r = 0
     x = 0
@@ -282,12 +287,8 @@ def setting(item, widget, feed, dict1, dictQ, APIkey, m2, run, sent, widget2, fb
         if (item.text() == entry):
             #sender = QApplication([])
             ent = entry + "\n\n" + str(dict1[entry])
-            while x in spec.values():
-                x += 1
-                if x == 999:
-                    x += 1
-            spec[entry] = x
-            window = MessageEdit(ent, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2)
+
+            window = MessageEdit(ent, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec)
             #sender.exec()
 
             #message.exec()
@@ -296,7 +297,7 @@ def setting(item, widget, feed, dict1, dictQ, APIkey, m2, run, sent, widget2, fb
             return None
     return None
 
-def settingQ(item, widget, feed, dictQ, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2):
+def settingQ(item, widget, feed, dictQ, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec):
     #message = QMessageBox()
     #r = 0
     x = 0
@@ -305,12 +306,8 @@ def settingQ(item, widget, feed, dictQ, APIkey, m2, run, sent, fbbool, pinbool, 
             #sender = QApplication([])
             ent = entry + "\n\n" + str(dictQ[entry])
             #print(dictQ[entry])
-            while x in spec.values():
-                x += 1
-                if x == 999:
-                    x += 1
-            spec[entry] = x
-            window = MessageEdit(ent, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2)
+            
+            window = MessageEdit(ent, dictQ, entry, APIkey, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec)
             #sender.exec()
             #message.exec()
             #print("Good")
@@ -338,7 +335,8 @@ def main(url, dict1, dictQ, exe, fbapi, fbbool, pinapi, pinbool, username, board
     board = "".join(board)
     m2 = multiprocessing.Manager()
     run = m2.Event()
-    sent = m2.Event()
+    #sent = m2.Event()
+    sent = []
     feed = feedparser.parse(url)
     app = QApplication([])
     window = QWidget()
@@ -364,19 +362,19 @@ def main(url, dict1, dictQ, exe, fbapi, fbbool, pinapi, pinbool, username, board
 
     listWidgetQ = QListWidget()
     row = 0
-    spec2 = m2.dict()
+    #spec2 = m2.dict()
     #print(dict1.keys())
     for i in list(dictQ.keys()):
         
         listWidgetQ.insertItem(row, i)
         row += 1
     def on_item_activatedQ(item):
-        settingQ(item, listWidgetQ, feed, dictQ, fbapi, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec, spec2)
+        settingQ(item, listWidgetQ, feed, dictQ, fbapi, m2, run, sent, fbbool, pinbool, pinapi, username, board, spec)
 
     listWidgetQ.itemActivated.connect(on_item_activatedQ)
 
     def on_item_activated(item):
-        setting(item, listWidget, feed, dict1, dictQ, fbapi, m2, run, sent, listWidgetQ, fbbool, pinbool, pinapi, username, board, spec, spec2)
+        setting(item, listWidget, feed, dict1, dictQ, fbapi, m2, run, sent, listWidgetQ, fbbool, pinbool, pinapi, username, board, spec)
 
     listWidget.itemActivated.connect(on_item_activated)
 
