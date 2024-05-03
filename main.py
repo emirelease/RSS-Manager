@@ -193,7 +193,10 @@ class MessageEdit(QWidget):
         #time = DT.time()
         prev = 0
         y = 0
+        
         for x in list(self.spec.keys()):
+            if x not in self.sent:
+                self.sent[x] =self.m2.Event()
             if x == entry and self.sent[x].is_set():
                 prev = self.spec[x]
                 y = x
@@ -336,7 +339,7 @@ def main(url, dict1, dictQ, exe, fbapi, fbbool, pinapi, pinbool, username, board
     m2 = multiprocessing.Manager()
     run = m2.Event()
     #sent = m2.Event()
-    sent = []
+    sent = {}
     feed = feedparser.parse(url)
     app = QApplication([])
     window = QWidget()
